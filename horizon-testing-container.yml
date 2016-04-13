@@ -1,0 +1,41 @@
+---
+- hosts: all
+  sudo: yes
+  tasks:
+  - name: Create a started container
+    lxc_container:
+      name: lxc-www1
+      container_log: true
+      template: ubuntu
+      state: started
+      template_options: --release trusty
+      container_config:
+      - "lxc.network.type=veth"
+      - "lxc.aa_profile=unconfined"
+      container_command: |
+        apt-get install -y python
+    register: www1_conf
+
+  # add container(s) to the hosts inventory
+  - name: add new hosts to inventory
+    add_host: hostname="lxc-www1"
+      groups=docker
+      ansible_ssh_host=""
+      ansible_ssh_port=22
+    when: item.State.Running == True
+    with_items: docker_containers
+
+
+- hosts: lxc-www1
+  tasks:
+    - name: hello
+      shell: echo "hello world"
+    - name: updates a server and install xvfb, firefox, python-setuptools, python-dev, build-essential.
+      apt: name="{{item}}"  state=present update_cache=yes
+      with_items:
+          - xvfb
+          - firefox
+          - python-setuptools
+          - python-dev
+          - build-essential
+          - git
